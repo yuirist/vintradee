@@ -1,0 +1,49 @@
+name: vintrade
+description: A campus-exclusive second-hand marketplace for UTHM students
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  provider: ^6.1.1
+  
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  firebase_storage: ^12.3.2
+  google_sign_in: ^6.2.1
+  
+  # UI & Utilities
+  google_fonts: ^6.1.0
+  image_picker: ^1.0.7
+  cached_network_image: ^3.3.1
+  
+  # Cloudinary
+  http: ^1.1.0
+  
+  # Payment
+  flutter_stripe: ^11.1.0
+  
+  # Other
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  
+  # Assets
+  assets:
+    - assets/images/
+    - assets/images/vintrade_logo/
+
