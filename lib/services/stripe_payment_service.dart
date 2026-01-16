@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class StripePaymentService {
   // Stripe Test Mode Publishable Key
@@ -53,13 +54,35 @@ class StripePaymentService {
       // Convert amount to cents/sen (Stripe requires integer)
       final amountInCents = (amount * 100).toInt();
 
+      // Get current user's email for Stripe receipt
+      // CRITICAL: Without receipt_email, Stripe has no recipient address and won't send the email
+      // even if 'Successful payments' toggle is ON in the Stripe dashboard
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUserEmail = currentUser?.email?.trim();
+
       // Stripe API requires form-encoded body
-      final body = {
+      final body = <String, String>{
         'amount': amountInCents.toString(),
         'currency': currency.toLowerCase(),
         'payment_method_types[]':
             'fpx', // FPX for Malaysian users (Bank Rakyat, etc.)
       };
+
+      // Add receipt_email parameter - REQUIRED for Stripe to send receipts
+      // Use the email of the currently logged-in user: FirebaseAuth.instance.currentUser?.email
+      if (currentUserEmail != null && currentUserEmail.isNotEmpty) {
+        body['receipt_email'] = currentUserEmail;
+        debugPrint(
+            '📧 Receipt email parameter added to PaymentIntent: $currentUserEmail');
+        debugPrint(
+            '   ✅ Stripe will email receipt to this address after successful payment');
+      } else {
+        debugPrint('⚠️ WARNING: No user email available!');
+        debugPrint('   Current user: ${currentUser?.uid ?? "null"}');
+        debugPrint('   User email: ${currentUser?.email ?? "null"}');
+        debugPrint(
+            '   ❌ Receipt email NOT included - Stripe will NOT send receipt even if toggle is ON');
+      }
 
       // Encode body as form-urlencoded
       final encodedBody = body.entries
@@ -80,6 +103,20 @@ class StripePaymentService {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body) as Map<String, dynamic>;
         debugPrint('✅ Payment intent created successfully');
+
+        // Verify receipt_email was included in the response (echoed back by Stripe)
+        final receiptEmailInResponse = result['receipt_email'];
+        if (receiptEmailInResponse != null) {
+          debugPrint(
+              '✅ Receipt email confirmed in PaymentIntent response: $receiptEmailInResponse');
+          debugPrint(
+              '   Stripe will email receipt to this address after successful payment');
+        } else if (currentUserEmail != null && currentUserEmail.isNotEmpty) {
+          debugPrint(
+              '⚠️ WARNING: receipt_email not found in PaymentIntent response');
+          debugPrint('   Expected: $currentUserEmail');
+        }
+
         final clientSecret = result['client_secret']?.toString() ?? '';
         if (clientSecret.isNotEmpty) {
           final preview = clientSecret.length > 20

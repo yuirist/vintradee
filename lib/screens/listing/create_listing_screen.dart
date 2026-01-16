@@ -42,7 +42,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   final List<String> _categories = ['Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing', 'Other'];
   final List<String> _conditions = ['Excellent', 'Good', 'Fair', 'Poor'];
-  final List<String> _dealMethods = ['Meet Up', 'Postage'];
+  final List<String> _dealMethods = ['Meet Up']; // Only Meet Up option available
   final List<String> _meetupLocations = [
     'Tunku Tun Aminah Library',
     'Kolej Kediaman Perwira',
@@ -54,6 +54,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   void initState() {
     super.initState();
     _loadSellerName();
+    // Auto-select 'Meet Up' as the only deal method option
+    _selectedDealMethod = 'Meet Up';
   }
 
   Future<void> _loadSellerName() async {
@@ -131,17 +133,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       return;
     }
 
-    if (_selectedDealMethod == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a deal method'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (_selectedDealMethod == 'Meet Up' && (_selectedLocation == null || _selectedLocation!.isEmpty)) {
+    // Clean Data Entry: Ensure dealMethod is strictly set to 'Meet Up'
+    _selectedDealMethod = 'Meet Up'; // Force to 'Meet Up' since it's the only option
+    
+    // Meet up location is always required
+    if (_selectedLocation == null || _selectedLocation!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a meet up location'),
@@ -205,21 +201,33 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         createdAt: DateTime.now(),
       );
 
-      // Create product data with seller info (including faculty and studentId)
+      // Explicit Product ID: Create a new document reference first
+      final productDocRef = _firestore
+          .collection(AppConstants.productsCollection)
+          .doc();
+      
+      // Store the generated document ID
+      final productId = productDocRef.id;
+
+      // Complete Data Map: Ensure every new product has required fields from the start
       final productData = <String, dynamic>{
         ...product.toMap(),
+        'productId': productId, // Store the generated ID as a field
+        'status': 'available', // Explicit status field
+        'category': _selectedCategory!, // Include category (supports 'Other')
         'sellerName': _sellerName ?? user.displayName ?? 'Seller',
         'faculty': _sellerFaculty ?? '',
         'studentId': _sellerStudentId ?? '',
-        'dealMethod': _selectedDealMethod,
-        'meetupLocation': _selectedDealMethod == 'Meet Up' ? _selectedLocation : null,
+        'dealMethod': 'Meet Up', // Clean Data Entry: Strictly set to 'Meet Up'
+        'meetupLocation': _selectedLocation, // Always required since only Meet Up is available
+        'createdAt': FieldValue.serverTimestamp(), // Server timestamp for consistency
         'timestamp': FieldValue.serverTimestamp(), // For Firestore indexing
       };
 
-      // Save to Firestore products collection
-      await _firestore
-          .collection(AppConstants.productsCollection)
-          .add(productData);
+      // Save to Firestore using the explicit document reference
+      await productDocRef.set(productData);
+      
+      debugPrint('✅ Product created with ID: $productId');
 
       // Update the image path with actual product ID (optional optimization)
       // For now, we'll keep the temp ID since it works
@@ -556,11 +564,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
-                      _selectedDealMethod = newValue;
-                      // Clear location if switching to Postage
-                      if (newValue == 'Postage') {
-                        _selectedLocation = null;
-                      }
+                      // Clean Data Entry: Always set to 'Meet Up' (only option)
+                      _selectedDealMethod = 'Meet Up';
                     });
                   },
                   validator: (value) {
@@ -571,8 +576,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   },
                 ),
                 
-                // Meet Up Location Dropdown (conditional)
-                if (_selectedDealMethod == 'Meet Up') ...[
+                // Meet Up Location Dropdown (always shown since only Meet Up is available)
+                ...[
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
                     value: _selectedLocation,
@@ -625,7 +630,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       });
                     },
                     validator: (value) {
-                      if (_selectedDealMethod == 'Meet Up' && (value == null || value.isEmpty)) {
+                      // Meet up location is always required since only Meet Up is available
+                      if (value == null || value.isEmpty) {
                         return 'Please select a meet up location';
                       }
                       return null;

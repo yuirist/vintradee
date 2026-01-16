@@ -45,42 +45,70 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           try {
             final trimmedId = productId.trim();
             
-            // Final validation before query
+            // Add Validation: Check before calling .doc()
             if (trimmedId.isEmpty) {
               debugPrint('⚠️ Skipping empty product ID after trimming');
               return null;
             }
             
-            // Fix: Use Firestore Document ID (doc.id) instead of an id field
-            // The productId from favorites is the Firestore document ID (exists from creation, not after sale)
+            // Change Fetch Logic: Use Firestore Document ID (snapshot.id) instead of productData['id']
+            // Stop looking for productData['id'] - use doc.id (Firestore Document ID) exclusively
             debugPrint('📦 Fetching product with Document ID: $trimmedId');
             final doc = await _firestore
                 .collection(AppConstants.productsCollection)
-                .doc(trimmedId) // Use Document ID directly (not a data field)
+                .doc(trimmedId) // Use productId as document ID
                 .get();
             
             if (doc.exists && doc.data() != null) {
               try {
-                final productData = doc.data()!;
-                // Fix Data Mapping: Use document ID (doc.id) as the product ID
-                // Products collection uses Firestore Document ID, NOT an 'id' data field
-                // The document ID exists from the moment the product is created, not after sale
-                final mappedProduct = ProductModel.fromMap({
-                  'id': doc.id, // Firestore Document ID is the product ID (always exists)
-                  ...productData,
-                  // Override any 'id' field in data with document ID to ensure consistency
-                });
+                final productData = Map<String, dynamic>.from(doc.data()!);
                 
-                debugPrint('✅ Successfully mapped product: ${mappedProduct.title} (ID: ${doc.id})');
-                
-                // Validate the mapped product has a valid ID
-                if (mappedProduct.id.isEmpty) {
-                  debugPrint('⚠️ Mapped product has empty ID for document ${doc.id}');
-                  return null;
+                // Ignore empty 'id' field: Remove any empty 'id' field from productData
+                // This ensures we always use doc.id instead of an empty string from the database
+                if (productData.containsKey('id') && (productData['id'] == null || productData['id'] == '')) {
+                  productData.remove('id'); // Remove empty 'id' field
+                  debugPrint('  ℹ️ Removed empty "id" field from productData, will use doc.id: ${doc.id}');
                 }
                 
-                // Fix "Purchase Only" bug: Return product regardless of status
-                // Don't filter by purchase status - show all favorited items
+                // Map Document ID: Use Firestore Document ID (doc.id) as the unique identifier
+                // Spread productData (without empty 'id'), then override with doc.id
+                final mappedProduct = ProductModel.fromMap({
+                  ...productData, // Spread all product data (empty 'id' already removed)
+                  'id': doc.id, // Override/Set with Firestore Document ID (ensures ID is never empty)
+                });
+                
+                // Validation: Check that Document ID was successfully mapped
+                if (mappedProduct.id.isEmpty) {
+                  debugPrint('⚠️ WARNING: Mapped product has empty ID for document ${doc.id}');
+                  debugPrint('   Product title: ${mappedProduct.title}');
+                  debugPrint('   Document ID: ${doc.id}');
+                  debugPrint('   This should not happen - using doc.id as fallback');
+                  
+                  // Fallback: Create a copy with explicit ID if fromMap() failed
+                  final fallbackProduct = ProductModel(
+                    id: doc.id, // Use Document ID directly
+                    sellerId: mappedProduct.sellerId,
+                    title: mappedProduct.title,
+                    description: mappedProduct.description,
+                    price: mappedProduct.price,
+                    category: mappedProduct.category,
+                    imageUrls: mappedProduct.imageUrls,
+                    condition: mappedProduct.condition,
+                    status: mappedProduct.status,
+                    createdAt: mappedProduct.createdAt,
+                    updatedAt: mappedProduct.updatedAt,
+                    buyerId: mappedProduct.buyerId,
+                    soldAt: mappedProduct.soldAt,
+                  );
+                  debugPrint('✅ Created fallback product with explicit ID: ${fallbackProduct.id}');
+                  return fallbackProduct;
+                }
+                
+                debugPrint('✅ Successfully mapped product: ${mappedProduct.title} (ID: ${mappedProduct.id}, matches doc.id: ${mappedProduct.id == doc.id})');
+                
+                // Display: Return product to be displayed in UI
+                // Ignore empty 'id' field in database - we use doc.id instead
+                // Show every item the user has liked, even if the id field in data is empty
                 return mappedProduct;
               } catch (e) {
                 debugPrint('❌ Error parsing product ${doc.id}: $e');

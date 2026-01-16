@@ -6,8 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/chat_service.dart';
-import '../../services/firebase_service.dart';
-import '../../models/user_model.dart';
 import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -20,7 +18,6 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final ChatService _chatService = ChatService();
-  final FirebaseService _firebaseService = FirebaseService();
   
   // Gold theme color
   static const Color goldColor = Color(0xFFdbc156);
@@ -277,105 +274,78 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 );
               }
               
-              // Use FutureBuilder to fetch the "Other User's" displayName and photoUrl
-              return FutureBuilder<UserModel?>(
-                future: _firebaseService.getUserById(otherParticipantId).catchError((error) {
-                  debugPrint('⚠️ Error fetching user $otherParticipantId: $error');
-                  return null; // Return null on error instead of throwing
-                }),
+              // Fetch Real-time Data: Use StreamBuilder for real-time user data updates
+              // Identify the Other User: If currentUserId == buyerId, fetch sellerId profile
+              // If currentUserId == sellerId, fetch buyerId profile
+              return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(otherParticipantId)
+                    .snapshots(),
                 builder: (context, userSnapshot) {
                   String displayName = '';
                   String? photoUrl;
                   
-                  // Role-based display: Fetch the "Other User's" data
-                  // If currentUserId == buyerId: show seller's name and photo
-                  // If currentUserId == sellerId: show buyer's name and photo
-                  if (userSnapshot.hasData && userSnapshot.data != null) {
+                  // Map UI Elements: Extract displayName and photoUrl from userData
+                  if (userSnapshot.hasData && userSnapshot.data!.exists) {
                     try {
-                      final user = userSnapshot.data!;
-                      // Get displayName from users collection, fallback to email if displayName is empty
-                      if (user.displayName.isNotEmpty) {
-                        displayName = user.displayName;
-                      } else if (user.email.isNotEmpty) {
-                        displayName = user.email;
-                      } else {
-                        displayName = 'User'; // Fallback if both are empty
+                      final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                      if (userData != null) {
+                        // Replace hardcoded 'User' text with userData['displayName']
+                        displayName = userData['displayName']?.toString().trim() ?? '';
+                        
+                        // Fallback to email if displayName is empty
+                        if (displayName.isEmpty) {
+                          displayName = userData['email']?.toString().trim() ?? '';
+                        }
+                        
+                        // Never show 'User' - show email or leave empty for loading
+                        if (displayName.isEmpty) {
+                          displayName = userData['email']?.toString().trim() ?? '';
+                        }
+                        
+                        // Get photoUrl for CircleAvatar
+                        photoUrl = userData['photoUrl']?.toString().trim();
                       }
-                      photoUrl = user.photoUrl;
                     } catch (e) {
                       debugPrint('⚠️ Error parsing user data: $e');
-                      displayName = 'User';
+                      // On error, try to get email as fallback
+                      try {
+                        final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                        displayName = userData?['email']?.toString().trim() ?? '';
+                      } catch (_) {
+                        displayName = '';
+                      }
                     }
                   } else if (userSnapshot.hasError) {
-                    // If there's an error, show fallback
+                    // Error Handling: If photoUrl is empty or user data has error
                     debugPrint('⚠️ Error in userSnapshot: ${userSnapshot.error}');
-                    displayName = 'User';
+                    displayName = ''; // Leave empty to show loading state
                   } else if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    // While loading, displayName remains empty - will show grayed placeholder
+                    // While loading, displayName remains empty - will show loading placeholder
                     displayName = '';
                   } else {
-                    // No data found - show fallback
-                    displayName = 'User';
+                    // No data found - show loading state
+                    displayName = '';
                   }
                   
-                  // Build CircleAvatar with photoUrl or initials
+                  // Map UI Elements: Build CircleAvatar with photoUrl or default person icon
                   Widget avatar;
                   
-                  if (photoUrl != null && photoUrl.isNotEmpty && photoUrl.startsWith('http')) {
-                    // Show profile picture with error handling
-                    avatar = ClipOval(
-                      child: Image.network(
-                        photoUrl,
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback to initials if image fails to load
-                          return CircleAvatar(
-                            radius: 20,
-                            backgroundColor: goldColor,
-                            child: Text(
-                              displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                              style: GoogleFonts.roboto(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.black,
-                                fontSize: 16,
-                              ),
-                            ),
-                          );
-                        },
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          // Show loading placeholder with gold background
-                          return CircleAvatar(
-                            radius: 20,
-                            backgroundColor: goldColor,
-                            child: displayName.isNotEmpty
-                                ? Text(
-                                    displayName[0].toUpperCase(),
-                                    style: GoogleFonts.roboto(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.black,
-                                      fontSize: 16,
-                                    ),
-                                  )
-                                : const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.black),
-                                    ),
-                                  ),
-                          );
-                        },
-                      ),
-                    );
-                  } else {
-                    // Show initials fallback with gold background
+                  // Error Handling: Check if photoUrl is valid
+                  final bool hasValidPhotoUrl = photoUrl != null && 
+                      photoUrl.isNotEmpty && 
+                      (photoUrl.startsWith('http://') || photoUrl.startsWith('https://'));
+                  
+                  if (hasValidPhotoUrl && displayName.isNotEmpty) {
+                    // Replace yellow 'U' icon with CircleAvatar(backgroundImage: NetworkImage(photoUrl))
                     avatar = CircleAvatar(
                       radius: 20,
                       backgroundColor: goldColor,
+                      backgroundImage: NetworkImage(photoUrl),
+                      onBackgroundImageError: (exception, stackTrace) {
+                        debugPrint('⚠️ Error loading profile image: $exception');
+                      },
                       child: userSnapshot.connectionState == ConnectionState.waiting
                           ? const SizedBox(
                               width: 16,
@@ -385,22 +355,49 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 valueColor: AlwaysStoppedAnimation<Color>(AppTheme.black),
                               ),
                             )
-                          : Text(
-                              displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
-                              style: GoogleFonts.roboto(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.black,
-                                fontSize: 16,
+                          : null,
+                    );
+                  } else if (displayName.isNotEmpty) {
+                    // Show default person icon with initials if photoUrl is empty
+                    avatar = CircleAvatar(
+                      radius: 20,
+                      backgroundColor: goldColor,
+                      child: Text(
+                        displayName[0].toUpperCase(),
+                        style: GoogleFonts.roboto(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.black,
+                          fontSize: 16,
+                        ),
+                      ),
+                    );
+                  } else {
+                    // Error Handling: Show CircularProgressIndicator or default person icon while loading
+                    avatar = CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppTheme.lightGrey,
+                      child: userSnapshot.connectionState == ConnectionState.waiting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textSecondary),
                               ),
+                            )
+                          : const Icon(
+                              Icons.person,
+                              color: AppTheme.textSecondary,
+                              size: 20,
                             ),
                     );
                   }
                   
-                  // Check loading state
+                  // Error Handling: Check loading state and show appropriate UI
                   final bool isLoading = userSnapshot.connectionState == ConnectionState.waiting;
-                  final bool hasData = displayName.isNotEmpty && displayName != 'User';
+                  final bool hasData = displayName.isNotEmpty;
                   
-                  // If still loading, show placeholder but with actual product info
+                  // If still loading and no data yet, show placeholder with loading indicator
                   if (isLoading && !hasData) {
                     return Opacity(
                       opacity: 0.6,
@@ -465,85 +462,215 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     );
                   }
                   
-                  // Show actual data when loaded (or fallback if data unavailable)
-                  final finalDisplayName = hasData ? displayName : 'User';
-                  final bool hasValidPhoto = hasData && photoUrl != null && photoUrl.isNotEmpty && photoUrl.startsWith('http');
+                  // Map UI Elements: Use displayName (never show hardcoded 'User')
+                  // If displayName is still empty, try to get email from snapshot directly
+                  String finalDisplayName = displayName;
+                  if (finalDisplayName.isEmpty && userSnapshot.hasData && userSnapshot.data!.exists) {
+                    try {
+                      final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+                      finalDisplayName = userData?['email']?.toString().trim() ?? 
+                                        userData?['displayName']?.toString().trim() ?? 
+                                        'User';
+                    } catch (_) {
+                      finalDisplayName = 'User';
+                    }
+                  } else if (finalDisplayName.isEmpty) {
+                    // Final fallback - shouldn't happen but handle gracefully
+                    finalDisplayName = 'User';
+                  }
                   
-                  return ListTile(
-                    leading: hasValidPhoto
-                        ? avatar
-                        : CircleAvatar(
-                            radius: 20,
-                            backgroundColor: goldColor,
-                            child: Text(
-                              finalDisplayName[0].toUpperCase(),
+                  // Fetch Product Data: Each chat document contains a productId
+                  // Use StreamBuilder to fetch that specific product's document from the products collection
+                  return StreamBuilder<DocumentSnapshot>(
+                    stream: productId.isNotEmpty
+                        ? FirebaseFirestore.instance
+                            .collection('products')
+                            .doc(productId)
+                            .snapshots()
+                        : null,
+                    builder: (context, productSnapshot) {
+                      String? productImageUrl;
+                      
+                      // Extract product image URL from productData
+                      if (productSnapshot.hasData && 
+                          productSnapshot.data != null && 
+                          productSnapshot.data!.exists) {
+                        try {
+                          final productData = productSnapshot.data!.data() as Map<String, dynamic>?;
+                          if (productData != null) {
+                            final imageUrls = productData['imageUrls'];
+                            if (imageUrls is List && imageUrls.isNotEmpty) {
+                              productImageUrl = imageUrls[0]?.toString();
+                            }
+                          }
+                        } catch (e) {
+                          debugPrint('⚠️ Error extracting product image URL: $e');
+                        }
+                      }
+                      
+                      // Fix User Identity: Ensure title shows displayName and leading shows photoUrl
+                      // Map UI Elements: Replace hardcoded 'User' text with userData['displayName']
+                      // Replace yellow 'U' icon with CircleAvatar(backgroundImage: NetworkImage(photoUrl))
+                      return ListTile(
+                        leading: avatar, // Shows photoUrl from users collection
+                        title: Text(
+                          finalDisplayName, // Use displayName from users collection, never hardcoded 'User'
+                          style: GoogleFonts.roboto(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Product Name subtitle - always show if available (product-specific chat)
+                            if (productTitle.isNotEmpty) ...[
+                              Text(
+                                productTitle,
+                                style: GoogleFonts.roboto(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                            ],
+                            Text(
+                              lastMessage.isNotEmpty ? lastMessage : 'No messages yet',
                               style: GoogleFonts.roboto(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.black,
-                                fontSize: 16,
+                                fontSize: 14,
+                                color: lastMessage.isNotEmpty 
+                                    ? AppTheme.textPrimary 
+                                    : AppTheme.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                        // Display Image on Right: Use trailing property to display the product image
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // Product image on the right with rounded corners
+                            if (productImageUrl != null && 
+                                productImageUrl.isNotEmpty &&
+                                (productImageUrl.startsWith('http://') || 
+                                 productImageUrl.startsWith('https://')))
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8), // Rounded corners to match VinTrade theme
+                                child: Image.network(
+                                  productImageUrl,
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    // Fallback if image fails to load
+                                    return Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.lightGrey,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        color: AppTheme.textSecondary,
+                                        size: 24,
+                                      ),
+                                    );
+                                  },
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    // Show loading placeholder with rounded corners
+                                    return Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.lightGrey,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textSecondary),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            else if (productSnapshot.connectionState == ConnectionState.waiting)
+                              // Show loading placeholder while fetching product
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.lightGrey,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.textSecondary),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              // Fallback if no product image available
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.lightGrey,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.shopping_bag_outlined,
+                                  color: AppTheme.textSecondary,
+                                  size: 24,
+                                ),
+                              ),
+                            // Timestamp below the product image
+                            if (lastMessageTime != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatTimestamp(lastMessageTime),
+                                style: GoogleFonts.roboto(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        onTap: () {
+                          // Navigate to ChatScreen with product-specific chatRoomId (buyerId_sellerId_productId)
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                chatRoomId: roomId,
+                                productId: productId,
+                                sellerId: sellerId,
+                                sellerName: finalDisplayName, // Real name from users collection
+                                productTitle: productTitle.isNotEmpty ? productTitle : 'Product',
                               ),
                             ),
-                          ),
-                    title: Text(
-                      finalDisplayName,
-                      style: GoogleFonts.roboto(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product Name subtitle - always show if available (product-specific chat)
-                        if (productTitle.isNotEmpty) ...[
-                          Text(
-                            productTitle,
-                            style: GoogleFonts.roboto(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.normal,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-                        Text(
-                          lastMessage.isNotEmpty ? lastMessage : 'No messages yet',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14,
-                            color: lastMessage.isNotEmpty 
-                                ? AppTheme.textPrimary 
-                                : AppTheme.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    trailing: lastMessageTime != null
-                        ? Text(
-                            _formatTimestamp(lastMessageTime),
-                            style: GoogleFonts.roboto(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                            ),
-                          )
-                        : null,
-                    onTap: () {
-                      // Navigate to ChatScreen with product-specific chatRoomId (buyerId_sellerId_productId)
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatScreen(
-                            chatRoomId: roomId,
-                            productId: productId,
-                            sellerId: sellerId,
-                            sellerName: displayName, // Real name from users collection
-                            productTitle: productTitle.isNotEmpty ? productTitle : 'Product',
-                          ),
-                        ),
+                          );
+                        },
                       );
                     },
                   );
