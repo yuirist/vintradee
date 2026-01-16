@@ -6,6 +6,7 @@ class FavoritesService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Add a product to favorites
+  // IMPORTANT: productId must be the Firestore Document ID (doc.id), not a data field
   Future<void> addToFavorites(String userId, String productId) async {
     try {
       // Validate inputs
@@ -13,17 +14,24 @@ class FavoritesService {
         throw Exception('UserId and productId must not be empty');
       }
       
-      // Ensure productId is stored in document data for reliable retrieval
+      final trimmedProductId = productId.trim();
+      if (trimmedProductId.isEmpty) {
+        throw Exception('ProductId must not be empty after trimming');
+      }
+      
+      debugPrint('❤️ Adding to favorites - userId: $userId, productId (Document ID): $trimmedProductId');
+      
+      // Ensure productId (Firestore Document ID) is stored in document data for reliable retrieval
       await _firestore
           .collection(AppConstants.favoritesCollection)
-          .doc('${userId}_$productId')
+          .doc('${userId}_$trimmedProductId')
           .set({
         'userId': userId,
-        'productId': productId.trim(), // Store trimmed productId in data
+        'productId': trimmedProductId, // Store Firestore Document ID (not a data field)
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
       
-      debugPrint('❤️ Added to favorites: $productId for user: $userId');
+      debugPrint('✅ Successfully added to favorites: $trimmedProductId for user: $userId');
     } catch (e) {
       debugPrint('❌ Error adding to favorites: $e');
       throw Exception('Error adding to favorites: $e');
@@ -33,11 +41,17 @@ class FavoritesService {
   // Remove a product from favorites
   Future<void> removeFromFavorites(String userId, String productId) async {
     try {
+      // Trim productId for consistency
+      final trimmedProductId = productId.trim();
+      if (trimmedProductId.isEmpty) {
+        throw Exception('ProductId must not be empty after trimming');
+      }
+      
       await _firestore
           .collection(AppConstants.favoritesCollection)
-          .doc('${userId}_$productId')
+          .doc('${userId}_$trimmedProductId')
           .delete();
-      debugPrint('💔 Removed from favorites: $productId for user: $userId');
+      debugPrint('💔 Removed from favorites: $trimmedProductId for user: $userId');
     } catch (e) {
       throw Exception('Error removing from favorites: $e');
     }
@@ -45,20 +59,32 @@ class FavoritesService {
 
   // Toggle favorite status
   Future<void> toggleFavorite(String userId, String productId) async {
-    final isFavorited = await isFavorite(userId, productId);
+    // Trim productId for consistency
+    final trimmedProductId = productId.trim();
+    if (trimmedProductId.isEmpty) {
+      throw Exception('ProductId must not be empty after trimming');
+    }
+    
+    final isFavorited = await isFavorite(userId, trimmedProductId);
     if (isFavorited) {
-      await removeFromFavorites(userId, productId);
+      await removeFromFavorites(userId, trimmedProductId);
     } else {
-      await addToFavorites(userId, productId);
+      await addToFavorites(userId, trimmedProductId);
     }
   }
 
   // Check if a product is favorited by a user
   Future<bool> isFavorite(String userId, String productId) async {
     try {
+      // Trim productId for consistency
+      final trimmedProductId = productId.trim();
+      if (trimmedProductId.isEmpty) {
+        return false;
+      }
+      
       final doc = await _firestore
           .collection(AppConstants.favoritesCollection)
-          .doc('${userId}_$productId')
+          .doc('${userId}_$trimmedProductId')
           .get();
       return doc.exists;
     } catch (e) {
@@ -69,9 +95,15 @@ class FavoritesService {
 
   // Stream to check if a product is favorited (for real-time updates)
   Stream<bool> isFavoriteStream(String userId, String productId) {
+    // Trim productId for consistency
+    final trimmedProductId = productId.trim();
+    if (trimmedProductId.isEmpty) {
+      return Stream.value(false);
+    }
+    
     return _firestore
         .collection(AppConstants.favoritesCollection)
-        .doc('${userId}_$productId')
+        .doc('${userId}_$trimmedProductId')
         .snapshots()
         .map((doc) => doc.exists);
   }
@@ -89,6 +121,7 @@ class FavoritesService {
   }
 
   // Get all favorite product IDs for a user (stream)
+  // IMPORTANT: productId is the Firestore Document ID (doc.id), not a data field
   // Gets productId from document data field first, then falls back to document ID extraction
   Stream<List<String>> getUserFavoriteProductIdsStream(String userId) {
     return _firestore
@@ -98,31 +131,38 @@ class FavoritesService {
         .map((snapshot) {
       final productIds = <String>[];
       
+      debugPrint('📋 Processing ${snapshot.docs.length} favorite documents for user: $userId');
+      
       for (final doc in snapshot.docs) {
         try {
           // Method 1: Get productId from document data field (most reliable)
+          // This is the Firestore Document ID stored when favoriting
           final data = doc.data();
           final productIdFromData = data['productId'] as String?;
           
           if (productIdFromData != null && productIdFromData.isNotEmpty && productIdFromData.trim().isNotEmpty) {
-            productIds.add(productIdFromData.trim());
+            final trimmedId = productIdFromData.trim();
+            debugPrint('  ✓ Found productId from data: $trimmedId');
+            productIds.add(trimmedId);
             continue;
           }
           
           // Method 2: Extract productId from document ID format: ${userId}_${productId}
+          // Fallback if productId field is missing (shouldn't happen, but handle gracefully)
           final docId = doc.id;
           if (docId.isNotEmpty) {
             final prefix = '${userId}_';
             if (docId.startsWith(prefix)) {
               final extractedId = docId.substring(prefix.length);
               if (extractedId.isNotEmpty && extractedId.trim().isNotEmpty) {
+                debugPrint('  ✓ Extracted productId from document ID: $extractedId');
                 productIds.add(extractedId.trim());
                 continue;
               }
             }
           }
           
-          debugPrint('⚠️ Skipped invalid favorite document: ${doc.id}');
+          debugPrint('⚠️ Skipped invalid favorite document: ${doc.id} (no valid productId found)');
         } catch (e) {
           debugPrint('❌ Error processing favorite document ${doc.id}: $e');
         }
@@ -134,7 +174,7 @@ class FavoritesService {
           .toSet() // Remove duplicates
           .toList();
       
-      debugPrint('📋 Found ${validProductIds.length} valid favorite product IDs for user: $userId');
+      debugPrint('✅ Found ${validProductIds.length} valid favorite product IDs (Document IDs) for user: $userId');
       if (validProductIds.isEmpty && snapshot.docs.isNotEmpty) {
         debugPrint('⚠️ Warning: ${snapshot.docs.length} favorite documents found but no valid product IDs extracted');
       }

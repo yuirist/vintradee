@@ -31,6 +31,9 @@ dependencies:
   # Payment
   flutter_stripe: ^11.1.0
   
+  # Email
+  mailer: ^6.0.1
+  
   # Other
   intl: ^0.19.0
 

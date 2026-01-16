@@ -21,7 +21,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedCategoryIndex = 0;
   final TextEditingController _searchController = TextEditingController();
-  final List<String> _categories = ['ALL', 'Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing'];
+  final List<String> _categories = ['ALL', 'Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing', 'Other'];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseService _firebaseService = FirebaseService();
   final FavoritesService _favoritesService = FavoritesService();
@@ -259,11 +259,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         itemCount: _categories.length,
         itemBuilder: (context, index) {
           final isSelected = index == _selectedCategoryIndex;
+          final category = _categories[index];
+          final isOtherCategory = category == 'Other';
+          
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
+              avatar: isOtherCategory
+                  ? Icon(
+                      Icons.grid_view,
+                      size: 18,
+                      color: isSelected ? AppTheme.white : AppTheme.textPrimary,
+                    )
+                  : null,
               label: Text(
-                _categories[index],
+                category,
                 style: GoogleFonts.roboto(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -510,10 +520,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         top: 8,
                         right: 8,
                         child: StreamBuilder<bool>(
-                          stream: _auth.currentUser != null
+                          stream: _auth.currentUser != null && product.id.trim().isNotEmpty
                               ? _favoritesService.isFavoriteStream(
                                   _auth.currentUser!.uid,
-                                  product.id,
+                                  product.id.trim(),
                                 )
                               : Stream.value(false),
                           builder: (context, favoriteSnapshot) {
@@ -534,12 +544,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   );
                                   return;
                                 }
+                                
+                                // Validate product ID before favoriting
+                                if (product.id.isEmpty || product.id.trim().isEmpty) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Invalid product ID'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                
                                 try {
+                                  // Use trimmed product ID for consistency
                                   await _favoritesService.toggleFavorite(
                                     currentUserId,
-                                    product.id,
+                                    product.id.trim(),
                                   );
+                                  
+                                  // Show feedback message
+                                  if (mounted) {
+                                    final wasFavorited = await _favoritesService.isFavorite(
+                                      currentUserId,
+                                      product.id.trim(),
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          wasFavorited 
+                                            ? 'Added to favorites' 
+                                            : 'Removed from favorites',
+                                        ),
+                                        backgroundColor: wasFavorited ? Colors.green : Colors.grey,
+                                        duration: const Duration(seconds: 1),
+                                      ),
+                                    );
+                                  }
                                 } catch (e) {
+                                  debugPrint('❌ Error toggling favorite: $e');
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(

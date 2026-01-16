@@ -40,7 +40,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   String? _sellerFaculty;
   String? _sellerStudentId;
 
-  final List<String> _categories = ['Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing'];
+  final List<String> _categories = ['Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing', 'Other'];
   final List<String> _conditions = ['Excellent', 'Good', 'Fair', 'Poor'];
   final List<String> _dealMethods = ['Meet Up', 'Postage'];
   final List<String> _meetupLocations = [

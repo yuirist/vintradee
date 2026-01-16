@@ -14,6 +14,7 @@ import '../../services/chat_service.dart';
 import '../../services/favorites_service.dart';
 import '../../services/payment_service.dart';
 import '../../services/stripe_payment_service.dart';
+import '../../services/email_service.dart';
 import '../../screens/chat/chat_screen.dart';
 import '../../core/widgets/custom_button.dart';
 
@@ -259,6 +260,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         meetupLocation: meetupLocation,
       );
 
+      // Send receipt email to buyer (triggered on Stripe payment success)
+      if (buyerEmail != null && buyerEmail.isNotEmpty) {
+        try {
+          final emailService = EmailService();
+          final formattedPrice = 'RM ${_product!.price.toStringAsFixed(2)}';
+          final emailSent = await emailService.sendReceiptEmail(
+            recipientEmail: buyerEmail,
+            itemName: _product!.title,
+            price: formattedPrice,
+          );
+          if (emailSent) {
+            debugPrint('✅ Receipt email sent successfully to $buyerEmail');
+          } else {
+            debugPrint('⚠️ Failed to send receipt email to $buyerEmail');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error sending receipt email: $e');
+          // Don't block the success flow if email fails
+        }
+      }
+
       // Show success animation
       if (mounted) {
         _showSuccessAnimation(context);
@@ -490,10 +512,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         actions: [
           if (_product != null)
             StreamBuilder<bool>(
-              stream: _auth.currentUser != null
+              stream: _auth.currentUser != null && _product!.id.trim().isNotEmpty
                   ? _favoritesService.isFavoriteStream(
                       _auth.currentUser!.uid,
-                      _product!.id,
+                      _product!.id.trim(),
                     )
                   : Stream.value(false),
               builder: (context, snapshot) {
@@ -514,12 +536,47 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       );
                       return;
                     }
+                    
+                    // Validate product ID before favoriting
+                    if (_product!.id.isEmpty || _product!.id.trim().isEmpty) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Invalid product ID'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                      return;
+                    }
+                    
                     try {
+                      // Use trimmed product ID for consistency
                       await _favoritesService.toggleFavorite(
                         currentUserId,
-                        _product!.id,
+                        _product!.id.trim(),
                       );
+                      
+                      // Show feedback message
+                      if (mounted) {
+                        final wasFavorited = await _favoritesService.isFavorite(
+                          currentUserId,
+                          _product!.id.trim(),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              wasFavorited 
+                                ? 'Added to favorites' 
+                                : 'Removed from favorites',
+                            ),
+                            backgroundColor: wasFavorited ? Colors.green : Colors.grey,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      }
                     } catch (e) {
+                      debugPrint('❌ Error toggling favorite: $e');
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

@@ -51,22 +51,27 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               return null;
             }
             
-            // Use the productId as the document ID to fetch from products collection
+            // Fix: Use Firestore Document ID (doc.id) instead of an id field
+            // The productId from favorites is the Firestore document ID (exists from creation, not after sale)
+            debugPrint('📦 Fetching product with Document ID: $trimmedId');
             final doc = await _firestore
                 .collection(AppConstants.productsCollection)
-                .doc(trimmedId)
+                .doc(trimmedId) // Use Document ID directly (not a data field)
                 .get();
             
             if (doc.exists && doc.data() != null) {
               try {
                 final productData = doc.data()!;
-                // Fix Data Mapping: Ensure product ID is correctly identified
-                // Use document ID as the primary product ID (most reliable)
+                // Fix Data Mapping: Use document ID (doc.id) as the product ID
+                // Products collection uses Firestore Document ID, NOT an 'id' data field
+                // The document ID exists from the moment the product is created, not after sale
                 final mappedProduct = ProductModel.fromMap({
-                  'id': doc.id, // Document ID is the product ID
+                  'id': doc.id, // Firestore Document ID is the product ID (always exists)
                   ...productData,
                   // Override any 'id' field in data with document ID to ensure consistency
                 });
+                
+                debugPrint('✅ Successfully mapped product: ${mappedProduct.title} (ID: ${doc.id})');
                 
                 // Validate the mapped product has a valid ID
                 if (mappedProduct.id.isEmpty) {
@@ -157,6 +162,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         // Stage 1: Stream the favorite product IDs in real-time
         // This StreamBuilder listens to the favorites collection and updates automatically
         // when favorites are added/removed, regardless of purchase status
+        // Uses Firestore Document ID (doc.id) from products collection, not an id field
         stream: _favoritesService.getUserFavoriteProductIdsStream(currentUserId),
         builder: (context, favoriteIdsSnapshot) {
           if (favoriteIdsSnapshot.connectionState == ConnectionState.waiting) {
@@ -356,10 +362,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   // Use the same product card widget as Dashboard for consistency
   Widget _buildProductCard(ProductModel product) {
-    // Fix ID Crash: Validate product.id before using it
+    // Fix: Validate product ID before using it
+    // Products collection uses Firestore Document ID (doc.id), not an id field
     if (product.id.isEmpty || product.id.trim().isEmpty) {
       debugPrint('⚠️ Invalid product ID in _buildProductCard: "${product.id}"');
-      return const SizedBox.shrink(); // Return empty widget if ID is invalid
+      return const SizedBox.shrink();
     }
     
     final productId = product.id.trim();
@@ -367,7 +374,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestore
           .collection(AppConstants.productsCollection)
-          .doc(productId)
+          .doc(productId) // Use Firestore Document ID
           .snapshots(),
       builder: (context, productSnapshot) {
         String sellerName = 'Seller';
@@ -469,72 +476,89 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                               ),
                             ),
                           ),
-                          // Favorite Heart Button
+                          // Remove from Favorites Button
+                          // Since we're on the Favorites page, all items are favorited
+                          // This button specifically removes the item
                           Positioned(
                             top: 8,
                             right: 8,
-                            child: StreamBuilder<bool>(
-                              stream: _auth.currentUser != null && product.id.isNotEmpty
-                                  ? _favoritesService.isFavoriteStream(
-                                      _auth.currentUser!.uid,
-                                      product.id.trim(),
-                                    )
-                                  : Stream.value(false),
-                              builder: (context, favoriteSnapshot) {
-                                final isFavorited = favoriteSnapshot.data ?? false;
-                                return IconButton(
-                                  icon: Icon(
-                                    isFavorited ? Icons.favorite : Icons.favorite_border,
-                                    color: isFavorited ? Colors.red : AppTheme.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () async {
-                                    final currentUserId = _auth.currentUser?.uid;
-                                    if (currentUserId == null) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please log in to add favorites'),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    // Validate product ID before toggling
-                                    if (product.id.isEmpty || product.id.trim().isEmpty) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Invalid product ID'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                      return;
-                                    }
-                                    
-                                    try {
-                                      await _favoritesService.toggleFavorite(
-                                        currentUserId,
-                                        product.id.trim(),
-                                      );
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Error: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Colors.black.withOpacity(0.5),
-                                    padding: const EdgeInsets.all(6),
-                                    minimumSize: const Size(32, 32),
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                );
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.favorite,
+                                color: Colors.red,
+                                size: 24,
+                              ),
+                              onPressed: () async {
+                                final currentUserId = _auth.currentUser?.uid;
+                                if (currentUserId == null) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Please log in to manage favorites'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                
+                                // Fix Path Error: Validate product ID before removing
+                                // Products collection uses Firestore Document ID (doc.id), not an id field
+                                if (product.id.isEmpty || product.id.trim().isEmpty) {
+                                  debugPrint('⚠️ Cannot remove: Invalid product ID');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Invalid product ID'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                
+                                final productId = product.id.trim();
+                                
+                                try {
+                                  // Remove from favorites collection
+                                  // The document ID format is: ${userId}_${productId}
+                                  await _firestore
+                                      .collection(AppConstants.favoritesCollection)
+                                      .doc('${currentUserId}_$productId')
+                                      .delete();
+                                  
+                                  // Show success message
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Item removed from favorites'),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                  
+                                  // Data Refresh: The StreamBuilder will automatically update
+                                  // because it's listening to the favorites collection
+                                  debugPrint('✅ Removed favorite: $productId');
+                                } catch (e) {
+                                  debugPrint('❌ Error removing favorite: $e');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error removing item: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
                               },
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black.withOpacity(0.5),
+                                padding: const EdgeInsets.all(6),
+                                minimumSize: const Size(32, 32),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
                             ),
                           ),
                         ],
