@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "310920437156",
+    "project_id": "vintrade-c835b",
+    "storage_bucket": "vintrade-c835b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:310920437156:android:761a5c8f63d1fd0dd23531",
+        "android_client_info": {
+          "package_name": "com.example.vintrade"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcZHOj1YtNiE0z3Sg_UK2QanUo4itw1h0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
