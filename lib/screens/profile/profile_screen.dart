@@ -7,7 +7,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_button.dart';
 import '../../core/constants/app_constants.dart';
 import '../../services/auth_service.dart';
-import '../../services/firebase_service.dart';
 import '../../models/product_model.dart';
 import '../../models/user_model.dart';
 import '../marketplace/product_detail_screen.dart';
@@ -24,7 +23,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
-  final FirebaseService _firebaseService = FirebaseService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -398,7 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(32.0),
                       child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.error_outline,
                             size: 48,
                             color: AppTheme.textSecondary,
@@ -425,7 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.all(32.0),
                       child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.inventory_2_outlined,
                             size: 48,
                             color: AppTheme.textSecondary,

@@ -278,7 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.error_outline,
                           size: 48,
                           color: AppTheme.textSecondary,
@@ -303,7 +303,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.chat_bubble_outline,
                           size: 64,
                           color: AppTheme.textSecondary,
@@ -395,8 +395,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   Container(
                     width: 48,
                     height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFE500), // Brand yellow
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFE500), // Brand yellow
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(

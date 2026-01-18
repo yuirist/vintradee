@@ -41,9 +41,6 @@ class _EditListingScreenState extends State<EditListingScreen> {
   String? _existingImageUrl;
   bool _isLoading = false;
   bool _isLoadingProduct = true;
-  String? _sellerName;
-  String? _sellerFaculty;
-  String? _sellerStudentId;
 
   final List<String> _categories = ['Textbooks', 'Shoes', 'Electronics', 'Furniture', 'Clothing', 'Other'];
   final List<String> _conditions = ['Excellent', 'Good', 'Fair', 'Poor'];
@@ -59,7 +56,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
   void initState() {
     super.initState();
     _loadProduct();
-    _loadSellerName();
+    // Removed _loadSellerName() call - not needed for edit listing
   }
 
   Future<void> _loadProduct() async {
@@ -148,19 +145,9 @@ class _EditListingScreenState extends State<EditListingScreen> {
     }
   }
 
-  Future<void> _loadSellerName() async {
-    final user = _authService.currentUser;
-    if (user != null) {
-      final userData = await _firebaseService.getUserById(user.uid);
-      if (userData != null) {
-        setState(() {
-          _sellerName = userData.displayName;
-          _sellerFaculty = userData.faculty;
-          _sellerStudentId = userData.studentId;
-        });
-      }
-    }
-  }
+  // Note: Seller info is not needed for edit listing, only for creation
+  // Removed unused _sellerName, _sellerFaculty, _sellerStudentId fields
+  // Removed _loadSellerName method as it's no longer needed
 
   Future<void> _pickImage() async {
     try {
@@ -437,7 +424,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.add_photo_alternate,
                                     size: 48,
                                     color: AppTheme.textSecondary,
@@ -477,7 +464,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                   hint: '0.00',
                   prefixIcon: Icons.attach_money,
                   controller: _priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter price';
@@ -495,7 +482,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
                 // Category Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory != null && _categories.contains(_selectedCategory)
+                  initialValue: _selectedCategory != null && _categories.contains(_selectedCategory)
                       ? _selectedCategory
                       : null,
                   decoration: InputDecoration(
@@ -557,7 +544,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
                 // Condition Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCondition != null && _conditions.contains(_selectedCondition)
+                  initialValue: _selectedCondition != null && _conditions.contains(_selectedCondition)
                       ? _selectedCondition
                       : null,
                   decoration: InputDecoration(
@@ -635,7 +622,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
 
                 // Deal Method Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedDealMethod != null && _dealMethods.contains(_selectedDealMethod)
+                  initialValue: _selectedDealMethod != null && _dealMethods.contains(_selectedDealMethod)
                       ? _selectedDealMethod
                       : null,
                   decoration: InputDecoration(
@@ -702,7 +689,7 @@ class _EditListingScreenState extends State<EditListingScreen> {
                 if (_selectedDealMethod == 'Meet Up') ...[
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
-                    value: _selectedLocation != null && _meetupLocations.contains(_selectedLocation)
+                    initialValue: _selectedLocation != null && _meetupLocations.contains(_selectedLocation)
                         ? _selectedLocation
                         : null,
                     decoration: InputDecoration(

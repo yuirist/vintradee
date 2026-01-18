@@ -117,17 +117,15 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: primaryYellow,
         secondary: secondaryGrey,
         tertiary: accentGreen,
         surface: white,
-        background: white,
         error: Colors.red,
         onPrimary: black,
         onSecondary: textPrimary,
         onSurface: textPrimary,
-        onBackground: textPrimary,
         onError: white,
       ),
       textTheme: _buildTextTheme(),

@@ -53,7 +53,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.error_outline,
                     size: 64,
                     color: AppTheme.textSecondary,
@@ -81,7 +81,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.inventory_2_outlined,
                     size: 64,
                     color: AppTheme.textSecondary,

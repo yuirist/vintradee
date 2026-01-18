@@ -41,7 +41,7 @@ class EmailService {
 
       // Create email message
       final message = Message()
-        ..from = Address(_senderEmail, 'VinTrade')
+        ..from = const Address(_senderEmail, 'VinTrade')
         ..recipients.add(recipientEmail)
         ..subject = 'VinTrade - Purchase Confirmed'
         ..html = _buildEmailHtml(itemName, price)

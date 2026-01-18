@@ -316,7 +316,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.error_outline,
                   size: 64,
                   color: AppTheme.textSecondary,
@@ -344,7 +344,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.inventory_2_outlined,
                   size: 64,
                   color: AppTheme.textSecondary,
@@ -640,10 +640,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         // Seller Info
                         Row(
                           children: [
-                            CircleAvatar(
+                            const CircleAvatar(
                               radius: 10,
                               backgroundColor: AppTheme.secondaryGrey,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.person,
                                 size: 14,
                                 color: AppTheme.textSecondary,

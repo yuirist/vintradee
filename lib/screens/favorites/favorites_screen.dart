@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -115,7 +114,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 return null;
               }
             } else {
-              debugPrint('⚠️ Product document ${trimmedId} does not exist');
+              debugPrint('⚠️ Product document $trimmedId does not exist');
               return null;
             }
           } catch (e) {
@@ -207,7 +206,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.error_outline,
                     size: 64,
                     color: AppTheme.textSecondary,
@@ -236,7 +235,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.favorite,
                       size: 64,
                       color: AppTheme.textSecondary,
@@ -275,7 +274,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
                         size: 64,
                         color: AppTheme.textSecondary,
@@ -312,7 +311,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.favorite,
                           size: 64,
                           color: AppTheme.textSecondary,
@@ -344,7 +343,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.error_outline,
                         size: 64,
                         color: AppTheme.textSecondary,
@@ -624,10 +623,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             // Seller Info
                             Row(
                               children: [
-                                CircleAvatar(
+                                const CircleAvatar(
                                   radius: 10,
                                   backgroundColor: AppTheme.secondaryGrey,
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.person,
                                     size: 14,
                                     color: AppTheme.textSecondary,

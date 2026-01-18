@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/chat_service.dart';
 import 'chat_screen.dart';
@@ -145,7 +144,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.error_outline,
                     size: 48,
                     color: AppTheme.textSecondary,
@@ -172,7 +171,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.chat_bubble_outline,
                       size: 64,
                       color: AppTheme.textSecondary,
@@ -240,10 +239,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
               // If we still don't have a valid participant ID, show placeholder
               if (otherParticipantId.isEmpty) {
                 return ListTile(
-                  leading: CircleAvatar(
+                  leading: const CircleAvatar(
                     radius: 20,
                     backgroundColor: AppTheme.lightGrey,
-                    child: const Text('?', style: TextStyle(color: AppTheme.textSecondary)),
+                    child: Text('?', style: TextStyle(color: AppTheme.textSecondary)),
                   ),
                   title: Text(
                     'Unknown User',
@@ -402,10 +401,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     return Opacity(
                       opacity: 0.6,
                       child: ListTile(
-                        leading: CircleAvatar(
+                        leading: const CircleAvatar(
                           radius: 20,
                           backgroundColor: AppTheme.lightGrey,
-                          child: const SizedBox(
+                          child: SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(

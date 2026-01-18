@@ -324,7 +324,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         : Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.add_photo_alternate,
                                 size: 48,
                                 color: AppTheme.textSecondary,
@@ -364,7 +364,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   hint: '0.00',
                   prefixIcon: Icons.attach_money,
                   controller: _priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter price';
@@ -382,7 +382,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
                 // Category Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Category',
                     hintText: 'Select category',
@@ -442,7 +442,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
                 // Condition Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedCondition,
+                  initialValue: _selectedCondition,
                   decoration: InputDecoration(
                     labelText: 'Condition',
                     hintText: 'Select condition',
@@ -518,7 +518,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
                 // Deal Method Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedDealMethod,
+                  initialValue: _selectedDealMethod,
                   decoration: InputDecoration(
                     labelText: 'Deal Method',
                     hintText: 'Select deal method',
@@ -580,7 +580,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 ...[
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
-                    value: _selectedLocation,
+                    initialValue: _selectedLocation,
                     decoration: InputDecoration(
                       labelText: 'Meet Up Location',
                       hintText: 'Select meet up location',

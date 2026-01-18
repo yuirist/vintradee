@@ -24,7 +24,7 @@ class SavedItemsScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.bookmark_border,
               size: 64,
               color: AppTheme.textSecondary,

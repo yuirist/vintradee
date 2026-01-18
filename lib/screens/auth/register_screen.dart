@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/custom_text_field.dart';
@@ -271,7 +270,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 // Faculty Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedFaculty,
+                  initialValue: _selectedFaculty,
                   decoration: InputDecoration(
                     labelText: 'Faculty',
                     hintText: 'Select your faculty',

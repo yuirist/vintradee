@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -765,9 +764,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.location_on,
-                            color: const Color(0xFFDBC156),
+                            color: Color(0xFFDBC156),
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -946,9 +945,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     // Add full stars
     for (int i = 0; i < fullStars; i++) {
       stars.add(
-        Icon(
+        const Icon(
           Icons.star,
-          color: const Color(0xFFDBC156),
+          color: Color(0xFFDBC156),
           size: 16,
         ),
       );
@@ -957,9 +956,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     // Add half star if needed
     if (hasHalfStar) {
       stars.add(
-        Icon(
+        const Icon(
           Icons.star_half,
-          color: const Color(0xFFDBC156),
+          color: Color(0xFFDBC156),
           size: 16,
         ),
       );
@@ -969,9 +968,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final emptyStars = 5 - stars.length;
     for (int i = 0; i < emptyStars; i++) {
       stars.add(
-        Icon(
+        const Icon(
           Icons.star_border,
-          color: const Color(0xFFDBC156),
+          color: Color(0xFFDBC156),
           size: 16,
         ),
       );
@@ -1002,7 +1001,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (_product!.status == ProductStatus.sold) {
       return Container(
         padding: const EdgeInsets.all(16),
-        child: CustomButton(
+        child: const CustomButton(
           text: 'Sold Out',
           onPressed: null,
           backgroundColor: AppTheme.textSecondary,
@@ -1062,7 +1061,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (_product!.status == ProductStatus.sold) {
       return Container(
         padding: const EdgeInsets.all(16),
-        child: CustomButton(
+        child: const CustomButton(
           text: 'Sold',
           onPressed: null,
           backgroundColor: AppTheme.textSecondary,

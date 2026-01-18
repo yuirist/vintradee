@@ -96,7 +96,7 @@ class LandingScreen extends StatelessWidget {
                                 color: AppTheme.primaryYellow.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(
+                              child: const Icon(
                                 Icons.verified_user,
                                 size: 32,
                                 color: AppTheme.primaryYellow,
